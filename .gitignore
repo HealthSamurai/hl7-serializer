@@ -1,0 +1,12 @@
+# Clojure
+.cpcache/
+
+# IDE
+.vscode/
+.calva/
+.nrepl-port
+.lsp/
+.clj-kondo/
+
+# OS
+.DS_Store

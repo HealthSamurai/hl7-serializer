@@ -1,0 +1,6 @@
+{:tasks
+ {test
+  {:doc
+   "Run tests"
+   :task
+   (clojure "-X:test")}}}
