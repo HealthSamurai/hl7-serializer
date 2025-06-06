@@ -1,5 +1,7 @@
 # HL7 Builder
 
+[![Tests](https://github.com/HealthSamurai/hl7-serializer/actions/workflows/test.yml/badge.svg)](https://github.com/HealthSamurai/hl7-serializer/actions/workflows/test.yml)
+
 Clojure library for building HL7v2 segments from structured data.
 
 ## Usage
@@ -30,7 +32,7 @@ Clojure library for building HL7v2 segments from structured data.
 - Top-level maps require key `0` for segment type
 - Component maps use positive integer keys
 - Vectors represent field repetitions
-- Supports 3 nesting levels: fields (`|`) ’ components (`^`) ’ subcomponents (`&`)
+- Supports 3 nesting levels: fields (`|`)  components (`^`)  subcomponents (`&`)
 
 ## Tests
 

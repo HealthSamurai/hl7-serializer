@@ -7,22 +7,23 @@
    :repetition "~"
    :subcomponent "&"})
 
-(defn trim-trailing [coll]
-  (let [v (vec coll)]
-    (loop [i (dec (count v))]
-      (cond
-        (neg? i) []
-        (seq (nth v i)) (subvec v 0 (inc i))
-        :else (recur (dec i))))))
+(defn trim-trailing
+  "Removes trailing empty elements from a vector"
+  [v]
+  (->> v
+       reverse
+       (drop-while empty?)
+       reverse
+       vec))
 
-(defn validate-map-keys [m is-top-level?]
+
+(defn validate-map-keys [m level]
   (let [keys (keys m)]
-    (if is-top-level?
+    (if (= 0 level) ; 0 is only for segment level
       (do
         (assert (contains? m 0) "Top-level segment must have key 0 (segment type)")
         (let [segment-type (get m 0)]
-          (assert (and (some? segment-type)
-                       (not (and (string? segment-type) (str/blank? segment-type))))
+          (assert (not (str/blank? segment-type))
                   "Top-level segment key 0 must have a non-empty segment type"))
         (let [negative-keys (filter neg? keys)]
           (assert (empty? negative-keys)
@@ -35,28 +36,24 @@
   (when (>= level 3)
     (throw (ex-info "HL7v2 does not support nesting beyond subcomponents" {}))))
 
-(defn build-field [delimiters v level is-top-level?]
+(defn build-field [delimiters v level]
   (cond
-    (string? v) v
-    (number? v) (str v)
     (vector? v)
     (let [element-level (max 1 (dec level))]
       (->> v
-           (map #(build-field delimiters % element-level false))
+           (map #(build-field delimiters % element-level))
            (str/join (:repetition delimiters))))
     (map? v)
     (do
-      (validate-map-keys v is-top-level?)
+      (validate-map-keys v level)
       (validate-nesting-level level)
       (let [joiner (case level
                      1 (:component delimiters)
-                     2 (:subcomponent delimiters)
-                     ;; Level 3+ would be sub-subcomponent (not supported)
-                     (throw (ex-info "unexpected nesting level" {:level level})))
-            max-pos (apply max (keys v))
-            values (map #(build-field delimiters (get v %) (inc level) false)
-                        (range 1 (inc max-pos)))
-            trimmed (trim-trailing values)]
+                     2 (:subcomponent delimiters))
+            upper-bound (apply max (keys v))
+            values (vec (map #(build-field delimiters (get v %) (inc level))
+                            (range 1 (inc upper-bound))))
+            trimmed (trim-trailing values)] ; Trim empty componenets, subcomponents
         (str/join joiner trimmed)))
     (nil? v) ""
     :else (str v)))
@@ -64,9 +61,9 @@
 (defn build-segment-str
   ([m] (build-segment-str default-delimiters m))
   ([delimiters m]
-   (validate-map-keys m true)
+   (validate-map-keys m 0)                                      ; 0 Is top segment level
    (let [max-key (apply max (keys m))
-         fields (map #(build-field delimiters (get m %) 1 false)  ; Start at level 1
-                     (range (inc max-key)))
-         trimmed-fields (trim-trailing fields)]
+         fields (vec (map #(build-field delimiters (get m %) 1) ; Field positions start from 1
+                         (range (inc max-key))))
+         trimmed-fields (trim-trailing fields)]                 ; Trim on empty trailing fileds
      (str/join (:field delimiters) trimmed-fields))))
