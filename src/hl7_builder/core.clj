@@ -1,13 +1,9 @@
 (ns hl7-builder.core
-  (:require [clojure.string :as str]))
+  (:require
+   [clojure.string :as str]
+   [hl7-builder.delimiters :refer [default-delimiters]]))
 
-(def default-delimiters
-  {:field "|"
-   :component "^"
-   :repetition "~"
-   :subcomponent "&"})
-
-(defn trim-trailing
+(defn- trim-trailing
   "Removes trailing empty elements from a vector"
   [v]
   (->> v
@@ -16,8 +12,7 @@
        reverse
        vec))
 
-
-(defn validate-map-keys [m level]
+(defn- validate-map-keys [m level]
   (let [keys (keys m)]
     (if (= 0 level) ; 0 is only for segment level
       (do
@@ -32,11 +27,11 @@
         (assert (empty? non-positive-keys)
                 "Maps cannot have zero or negative keys")))))
 
-(defn validate-nesting-level [level]
+(defn- validate-nesting-level [level]
   (when (>= level 3)
     (throw (ex-info "HL7v2 does not support nesting beyond subcomponents" {}))))
 
-(defn build-field [delimiters v level]
+(defn- build-field [delimiters v level]
   (cond
     (vector? v)
     (let [element-level (max 1 (dec level))]
@@ -52,18 +47,42 @@
                      2 (:subcomponent delimiters))
             upper-bound (apply max (keys v))
             values (vec (map #(build-field delimiters (get v %) (inc level))
-                            (range 1 (inc upper-bound))))
+                             (range 1 (inc upper-bound))))
             trimmed (trim-trailing values)] ; Trim empty componenets, subcomponents
         (str/join joiner trimmed)))
     (nil? v) ""
     :else (str v)))
 
+(defn- build-msh-segment
+  [delimiters m]
+  (validate-map-keys m 0)
+  (let [field-separator (if (contains? m 1)
+                          (get m 1)
+                          (:field delimiters))
+        encoding-chars (if (contains? m 2)
+                         (get m 2)
+                         (str (:component delimiters)
+                              (:repetition delimiters)
+                              (:escape delimiters)
+                              (:subcomponent delimiters)))
+        max-key (apply max (keys m))
+        fields-from-3 (when (> max-key 2)
+                        (vec (map #(build-field delimiters (get m %) 1)
+                                  (range 3 (inc max-key)))))
+        trimmed-fields (trim-trailing (or fields-from-3 []))]
+    (str "MSH" field-separator encoding-chars
+         (when (seq trimmed-fields)
+           (str field-separator (str/join field-separator trimmed-fields))))))
+
 (defn build-segment-str
   ([m] (build-segment-str default-delimiters m))
   ([delimiters m]
-   (validate-map-keys m 0)                                      ; 0 Is top segment level
-   (let [max-key (apply max (keys m))
-         fields (vec (map #(build-field delimiters (get m %) 1) ; Field positions start from 1
-                         (range (inc max-key))))
-         trimmed-fields (trim-trailing fields)]                 ; Trim on empty trailing fileds
-     (str/join (:field delimiters) trimmed-fields))))
+   (if (= "MSH" (get m 0))
+     (build-msh-segment delimiters m)
+     (do
+       (validate-map-keys m 0)
+       (let [max-key (apply max (keys m))
+             fields (vec (map #(build-field delimiters (get m %) 1)
+                              (range (inc max-key))))
+             trimmed-fields (trim-trailing fields)]
+         (str/join (:field delimiters) trimmed-fields))))))
