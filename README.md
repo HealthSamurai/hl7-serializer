@@ -4,6 +4,14 @@
 
 Clojure library for building and parsing HL7v2 segments with structured data.
 
+## Installation
+
+Add to your `deps.edn`:
+
+```clojure
+{:deps {com.github.healthsamurai/hl7-serializer {:sha "<latest-commit-sha>"}}}
+```
+
 ## Usage
 
 ### Building Segments
