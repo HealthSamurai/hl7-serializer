@@ -5,36 +5,35 @@
   (:import
    java.util.regex.Pattern))
 
-(defn- parse-field [delimiters s level]
+(defn- parse-field [delimiters string level]
   (cond
-    (str/blank? s) nil
+    (str/blank? string) nil
 
-    (str/includes? s (:component delimiters))
-    (let [comps (str/split s (re-pattern (Pattern/quote (:component delimiters))))
+    (str/includes? string (:repetition delimiters))
+    (let [reps (str/split string (re-pattern (Pattern/quote (:repetition delimiters))))]
+      (mapv #(parse-field delimiters % level) reps))
+
+    (str/includes? string (:component delimiters))
+    (let [comps (str/split string (re-pattern (Pattern/quote (:component delimiters))))
           indexed-components (keep-indexed (fn [idx comp]
                                              (when-not (str/blank? comp)
                                                [(inc idx) (parse-field delimiters comp 2)]))
                                            comps)]
-      (if (seq indexed-components) (into {} indexed-components) s))
-
-
-    (str/includes? s (:repetition delimiters))
-    (let [reps (str/split s (re-pattern (Pattern/quote (:repetition delimiters))))]
-      (mapv #(parse-field delimiters % level) reps))
+      (if (seq indexed-components) (into {} indexed-components) string))
 
     ;; Special case for subcomponents on first level
-    (and (= level 1) (str/includes? s (:subcomponent delimiters)))
-    {1 (parse-field delimiters s 2)}
+    (and (= level 1) (str/includes? string (:subcomponent delimiters)))
+    {1 (parse-field delimiters string 2)}
 
-    (and (= level 2) (str/includes? s (:subcomponent delimiters)))
-    (let [subcomps (str/split s (re-pattern (Pattern/quote (:subcomponent delimiters))))
+    (and (= level 2) (str/includes? string (:subcomponent delimiters)))
+    (let [subcomps (str/split string (re-pattern (Pattern/quote (:subcomponent delimiters))))
           indexed-subcomps (keep-indexed (fn [idx subcomp]
                                            (when-not (str/blank? subcomp)
                                              [(inc idx) subcomp]))
                                          subcomps)]
-      (if (seq indexed-subcomps) (into {} indexed-subcomps) s))
+      (if (seq indexed-subcomps) (into {} indexed-subcomps) string))
 
-    :else s))
+    :else string))
 
 (defn parse-segment-str
   ([s] (parse-segment-str default-delimiters s))

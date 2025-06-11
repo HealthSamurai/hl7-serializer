@@ -29,4 +29,13 @@
 (deftest test-parse-segment-str-repetitions
   (testing "Field with repetitions"
     (is (= {0 "PID" 1 ["value1" "value2"]}
-           (sut/parse-segment-str "PID|value1~value2")))))
+           (sut/parse-segment-str "PID|value1~value2"))))
+  
+  (testing "Field with repetitions containing components"
+    (is (= {0 "PID" 
+            1 "1"
+            3 [{1 "M000001531" 5 "MR" 6 "BMH"}
+               {1 "T1-20250118014500" 5 "PI" 6 "BMH"}
+               {1 "T00001540" 5 "EMR" 6 "BMH"}
+               {1 "05ADD0D4-5723-4399-8184-059AC0B2C8ED" 5 "PT" 6 "BMH"}]}
+           (sut/parse-segment-str "PID|1||M000001531^^^^MR^BMH~T1-20250118014500^^^^PI^BMH~T00001540^^^^EMR^BMH~05ADD0D4-5723-4399-8184-059AC0B2C8ED^^^^PT^BMH")))))
