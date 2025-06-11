@@ -22,11 +22,11 @@
 
     (and (= level 1) (str/includes? s (:repetition delimiters)))
     (let [reps (str/split s (re-pattern (Pattern/quote (:repetition delimiters))))]
-      (vec (map #(parse-field delimiters % 1) reps)))
+      (mapv #(parse-field delimiters % 1) reps))
 
     (and (= level 2) (str/includes? s (:repetition delimiters)))
     (let [reps (str/split s (re-pattern (Pattern/quote (:repetition delimiters))))]
-      (vec (map #(parse-field delimiters % 2) reps)))
+      (mapv #(parse-field delimiters % 2) reps))
 
     (and (= level 2) (str/includes? s (:subcomponent delimiters)))
     (let [subcomps (str/split s (re-pattern (Pattern/quote (:subcomponent delimiters))))
@@ -57,11 +57,9 @@
          (into (sorted-map) (merge {0 "MSH" 1 msh1 2 msh2} parsed-fields)))
        ;; All other segments are parsed normally
        (let [fields (str/split s (re-pattern (Pattern/quote (:field delimiters))))
-             segment-type (first fields)
-             field-values (rest fields)
              indexed-fields (keep-indexed (fn [idx field]
                                             (let [parsed (parse-field delimiters field 1)]
                                               (when parsed
-                                                [(inc idx) parsed])))
-                                          field-values)]
-         (into {0 segment-type} indexed-fields))))))
+                                                [idx parsed])))
+                                          fields)]
+         (into {} indexed-fields))))))
