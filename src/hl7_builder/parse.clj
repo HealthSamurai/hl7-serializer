@@ -20,13 +20,13 @@
     (and (= level 1) (str/includes? s (:subcomponent delimiters)))
     {1 (parse-field delimiters s 2)}
 
-    (and (= level 1) (str/includes? s (:repetition delimiters)))
+    (str/includes? s (:repetition delimiters))
     (let [reps (str/split s (re-pattern (Pattern/quote (:repetition delimiters))))]
       (mapv #(parse-field delimiters % 1) reps))
 
-    (and (= level 2) (str/includes? s (:repetition delimiters)))
+    (str/includes? s (:repetition delimiters))
     (let [reps (str/split s (re-pattern (Pattern/quote (:repetition delimiters))))]
-      (mapv #(parse-field delimiters % 2) reps))
+      (mapv #(parse-field delimiters % level) reps))
 
     (and (= level 2) (str/includes? s (:subcomponent delimiters)))
     (let [subcomps (str/split s (re-pattern (Pattern/quote (:subcomponent delimiters))))
