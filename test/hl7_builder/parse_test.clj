@@ -30,9 +30,9 @@
   (testing "Field with repetitions"
     (is (= {0 "PID" 1 ["value1" "value2"]}
            (sut/parse-segment-str "PID|value1~value2"))))
-  
+
   (testing "Field with repetitions containing components"
-    (is (= {0 "PID" 
+    (is (= {0 "PID"
             1 "1"
             3 [{1 "M000001531" 5 "MR" 6 "BMH"}
                {1 "T1-20250118014500" 5 "PI" 6 "BMH"}

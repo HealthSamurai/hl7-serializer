@@ -5,33 +5,36 @@
   (:import
    java.util.regex.Pattern))
 
-(defn- parse-field [delimiters string level]
-  (cond
-    (str/blank? string) nil
-
-    (str/includes? string (:repetition delimiters))
-    (let [reps (str/split string (re-pattern (Pattern/quote (:repetition delimiters))))]
-      (mapv #(parse-field delimiters % level) reps))
-
-    (str/includes? string (:component delimiters))
-    (let [comps (str/split string (re-pattern (Pattern/quote (:component delimiters))))
-          indexed-components (keep-indexed (fn [idx comp]
-                                             (when-not (str/blank? comp)
-                                               [(inc idx) (parse-field delimiters comp 2)]))
-                                           comps)]
-      (if (seq indexed-components) (into {} indexed-components) string))
-
-    ;; Special case for subcomponents on first level
-    (and (= level 1) (str/includes? string (:subcomponent delimiters)))
-    {1 (parse-field delimiters string 2)}
-
-    (and (= level 2) (str/includes? string (:subcomponent delimiters)))
+(defn- parse-subcomponents [delimiters string]
+  (if (str/includes? string (:subcomponent delimiters))
     (let [subcomps (str/split string (re-pattern (Pattern/quote (:subcomponent delimiters))))
           indexed-subcomps (keep-indexed (fn [idx subcomp]
                                            (when-not (str/blank? subcomp)
                                              [(inc idx) subcomp]))
                                          subcomps)]
       (if (seq indexed-subcomps) (into {} indexed-subcomps) string))
+    string))
+
+(defn- parse-field [delimiters string]
+  (cond
+    (str/blank? string) nil
+
+    (str/includes? string (:repetition delimiters))
+    (let [reps (str/split string (re-pattern (Pattern/quote (:repetition delimiters))))]
+      (mapv #(parse-field delimiters %) reps))
+
+    (str/includes? string (:component delimiters))
+    (let [comps (str/split string (re-pattern (Pattern/quote (:component delimiters))))
+          indexed-components (keep-indexed (fn [idx comp]
+                                             (when-not (str/blank? comp)
+                                               [(inc idx) (parse-subcomponents delimiters comp)]))
+                                           comps)]
+      (if (seq indexed-components) (into {} indexed-components) string))
+
+    (str/includes? string (:subcomponent delimiters))
+    ;; When field contains only subcomponents (no components), wrap in map with key 1
+    ;; to maintain consistent component-like structure for single component fields
+    {1 (parse-subcomponents delimiters string)}
 
     :else string))
 
@@ -47,7 +50,7 @@
              ;; The rest parsed normally starting from msh3
              parsed-fields (into {} (keep-indexed
                                      (fn [idx field]
-                                       (let [parsed (parse-field delimiters field 1)]
+                                       (let [parsed (parse-field delimiters field)]
                                          (when parsed
                                            [(+ idx 3) parsed])))  ; Start from msh3
                                      (drop 2 fields)))]           ; Drop msh1, msh2
@@ -55,7 +58,7 @@
        ;; All other segments are parsed normally
        (let [fields (str/split s (re-pattern (Pattern/quote (:field delimiters))))
              indexed-fields (keep-indexed (fn [idx field]
-                                            (let [parsed (parse-field delimiters field 1)]
+                                            (let [parsed (parse-field delimiters field)]
                                               (when parsed
                                                 [idx parsed])))
                                           fields)]
