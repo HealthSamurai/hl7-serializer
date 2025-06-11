@@ -9,7 +9,7 @@
   (cond
     (str/blank? s) nil
 
-    (and (= level 1) (str/includes? s (:component delimiters)))
+    (str/includes? s (:component delimiters))
     (let [comps (str/split s (re-pattern (Pattern/quote (:component delimiters))))
           indexed-components (keep-indexed (fn [idx comp]
                                              (when-not (str/blank? comp)
@@ -17,12 +17,14 @@
                                            comps)]
       (if (seq indexed-components) (into {} indexed-components) s))
 
-    (and (= level 1) (str/includes? s (:subcomponent delimiters)))
-    {1 (parse-field delimiters s 2)}
 
     (str/includes? s (:repetition delimiters))
     (let [reps (str/split s (re-pattern (Pattern/quote (:repetition delimiters))))]
       (mapv #(parse-field delimiters % level) reps))
+
+    ;; Special case for subcomponents on first level
+    (and (= level 1) (str/includes? s (:subcomponent delimiters)))
+    {1 (parse-field delimiters s 2)}
 
     (and (= level 2) (str/includes? s (:subcomponent delimiters)))
     (let [subcomps (str/split s (re-pattern (Pattern/quote (:subcomponent delimiters))))
