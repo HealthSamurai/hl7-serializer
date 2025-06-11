@@ -18,7 +18,7 @@
       (if (seq indexed-components) (into {} indexed-components) s))
 
     (and (= level 1) (str/includes? s (:subcomponent delimiters)))
-    {1 (parse-field delimiters s 2)}  ; Wrap in component 1
+    {1 (parse-field delimiters s 2)}
 
     (and (= level 1) (str/includes? s (:repetition delimiters)))
     (let [reps (str/split s (re-pattern (Pattern/quote (:repetition delimiters))))]
