@@ -22,10 +22,6 @@
 
     (str/includes? s (:repetition delimiters))
     (let [reps (str/split s (re-pattern (Pattern/quote (:repetition delimiters))))]
-      (mapv #(parse-field delimiters % 1) reps))
-
-    (str/includes? s (:repetition delimiters))
-    (let [reps (str/split s (re-pattern (Pattern/quote (:repetition delimiters))))]
       (mapv #(parse-field delimiters % level) reps))
 
     (and (= level 2) (str/includes? s (:subcomponent delimiters)))
